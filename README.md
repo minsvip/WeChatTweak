@@ -13,7 +13,7 @@
 > `Contents/Resources/wechat.dylib`. **This fork does**: it locates the 4.x patch points, verifies the original
 > bytes before writing anything, and re-signs the bundle **keeping its entitlements** (a bare
 > `codesign --deep --sign -` strips them, and WeChat then refuses to launch on any machine with SIP on).
-> Anti-recall + auto-updater block for selected WeChat builds through `270134` (4.x patches: arm64; Intel for 270134 / 270102).
+> Anti-recall + auto-updater block for selected WeChat builds through `270135` (4.x patches: arm64; Intel for 270135 / 270134 / 270102).
 > Prefer a GUI? → **[Unrevoke](https://github.com/zengtianli/WeChatUnrevoke)**.
 
 ---
@@ -32,7 +32,7 @@
 > **本 fork 与上游的关系**：上游 [sunnyyoung/WeChatTweak](https://github.com/sunnyyoung/WeChatTweak)
 > （13.8k★、1.6k fork）**最后一次提交停在 2026 年 2 月**，而微信 4.x 把撤回逻辑整体搬进了
 > `Contents/Resources/wechat.dylib`，它知道的补丁点全部失效。本 fork 从 4.1.10（build 268880）接上，
-> 现已收录至 **build 270134（4.1.15.54）**（并非覆盖期间每一个构建号，4.x 补丁为 arm64），并且：
+> 现已收录至 **build 270135（4.1.15.55）**（并非覆盖期间每一个构建号，4.x 补丁为 arm64），并且：
 >
 > - 支持**按目标 dylib** 打补丁（4.x 的逻辑不在主程序里了）
 > - **写入前校验原始字节** —— 打错版本直接报错，不会盲写把微信弄坏
@@ -41,7 +41,7 @@
 
 ## 功能
 
-| 功能 | 说明 | 微信 3.8.x | 微信 4.x（已收录构建，至 270134） |
+| 功能 | 说明 | 微信 3.8.x | 微信 4.x（已收录构建，至 270135） |
 | --- | --- | :---: | :---: |
 | **防撤回（静默变体）** | 别人撤回的消息原样留在聊天里，不弹提示 | ✓ | ✓（当前发布版） |
 | **防撤回（留提示变体）** | 消息留着 **且** 仍显示「对方撤回了一条消息」提示 | ✓ | ⚠️（`--variant keeptip`：**私聊**有提示；**群聊**仍静默无提示） |
@@ -62,12 +62,15 @@
 
 工具按 **构建号**（`CFBundleVersion`，即 `wechattweak versions` 打印的数字）匹配，不是营销版本号。
 
+2026-10-21：源码补丁库新增 **4.1.15.55 / 270135**，覆盖 arm64 与 x86_64。官方安装包 SHA256 为 `ceea355d5c93419658f777fdd1010f9b19d14fab6dc552af9c208cddad7f248f`；这是配置更新，不是 GUI 新版。下文旧构建的实测仍属历史证据。**34888 / 4.1.7.57** 尚未支持：逻辑位于主程序，三代定位签名均未命中。重新编译同一份补丁库不会增加支持。
+
 当前适配以**微信官网最新稳定版**为准。2026-10-10 核对官网安装包为 **4.1.15.54（build 270134）**，已提供 Apple Silicon（arm64）补丁；同为 4.1.15 的 270102（4.1.15.22）与 270100 也已收录。4.1.15 先后发过多个构建，界面上都显示 4.1.15，补丁地址各不相同，以构建号为准。4.1.13 的 269631（官网版）与 269602（App Store 版）也已收录；其他未收录构建建议从[微信官网](https://mac.weixin.qq.com/)更新到这版，再重新打补丁。官网版和 App Store 版即使都显示 4.1.13，也必须分别核对构建号，不能互套地址。
 
 270100 的定位样本是 2026-09-24 从[官网下载地址](https://dldir1.qq.com/weixin/Universal/Mac/WeChatMac.dmg)取得的安装包（2026-09-18 发布），SHA-256 为 `b73319ea3ef7f5f2f6f1403b0bed87ac75b5f5b70f0951ea61bad2d9449857f8`。269631 的定位样本来自[腾讯官方安装包](https://dldir1.qq.com/weixin/Universal/Mac/xWeChatMac_universal_4.1.13.63_269631.dmg)，SHA-256 为 `b247b2cc9dd2122024d6facf9f3c464f2564f106266851d439853bacc7013de9`。270134 的定位样本是 2026-10-10 从腾讯官方地址 `https://dldir1.qq.com/weixin/Universal/Mac/xWeChatMac_universal_4.1.15.54_270134.dmg` 取得的安装包，SHA-256 为 `a51d3f1bc7f47f204865270659806ed32fbb0ff3acade9b8952d4d403682a0b9`；270102 的样本是 `xWeChatMac_universal_4.1.15.22_270102.dmg`，SHA-256 为 `d87de447a43cd2d59aef441d3a8b32aad255427289581afcffc90aee0735dfc2`。使用 GUI 的用户联网退出并重开 WeChatUnrevoke 即可刷新补丁库，无需为此次配置更新重新安装 GUI。微信升级会清除补丁，升级后仍需重新开启并检查保护。
 
 | 构建号 | 微信版本 | 防撤回 | 阻止自动更新 |
 | --- | --- | :---: | :---: |
+| 270135 | 4.1.15.55 官网版，arm64 + Intel | 两架构原始字节、独立 dylib 写入/幂等/逐字节还原通过；真实聊天和 Intel 真机未测。Intel 仅 keeptip | 两架构各 8 个方法已核对并在独立 dylib 上写入；本构建整包重签未复验 |
 | 270134 | 4.1.15.54 官网版，arm64 + Intel（见下） | ✓（官方安装包副本在开启 SIP 的 Mac 上已验证 keeptip 与 silent 写入、体检、严格签名校验和还原，还原后 11 处补丁点与原包逐字节一致；真实聊天撤回待用户实测） | ✓（8 处原始字节已核对，写入后体检通过） |
 | 270102 | 4.1.15.22 官网版，arm64 + Intel（见下） | ✓（同上，同一流程在 4.1.15.22 原包副本上通过；补丁点与 fzlzjerry/wechat-antirecall 及本仓定位器的结果三方一致） | ✓（8 处原始字节已核对，写入后体检通过） |
 | 270100 | 4.1.15 官网版，arm64 | ✓（官方安装包副本已验证 keeptip 写入、体检、签名校验和还原；真实聊天撤回待用户实测） | ✓（8 处原始字节已核对，写入后体检通过） |
@@ -156,7 +159,7 @@ pkill -x WeChat
 > （`arch_supported: false`），`patch` 不写任何字节并说明原因 —— 改 arm64 切片对 Intel 上运行的微信没有任何作用，
 > 此前的版本会照写并报成功。用 Rosetta 运行微信的 Apple Silicon 用户可设 `WECHATTWEAK_HOST_ARCH=x86_64`。
 >
-> **Intel（x86_64）目前只有 270134 和 270102 两个构建，且只有 `keeptip`（留提示）和阻止自动更新，没有 `silent`。**
+> **Intel（x86_64）目前覆盖 270135、270134 和 270102 三个构建，且只有 `keeptip`（留提示）和阻止自动更新，没有 `silent`。**
 > 补丁点来自对官方安装包 x86_64 切片的静态分析：更新器 8 个方法按 ObjC 方法表按名取入口；防撤回点是解析撤回 XML 的函数里
 > 产生 `newmsgid` 的那次调用（改成返回 0，随后写入字段的就是 0，与 arm64 的 `str xzr` 等价），其前后的查表、判空、转换、
 > 写字段与 arm64 逐条对应，字段偏移相同。写入、体检、严格签名校验、还原已在原包副本上以 `WECHATTWEAK_HOST_ARCH=x86_64` 跑通，

@@ -18,7 +18,7 @@ final class ConfigIntelTests: XCTestCase {
     }
 
     func testIntelHasKeeptipAndUpdateBlockButNoSilentVariant() throws {
-        for (build, keeptipVA, expected) in [("270134", UInt64(0x5502d5d), "E8CE47E9FF"), ("270102", UInt64(0x537e8cd), "E83E4BE9FF")] {
+        for (build, keeptipVA, expected) in [("270135", UInt64(0x5503f8d), "E8CE47E9FF"), ("270134", UInt64(0x5502d5d), "E8CE47E9FF"), ("270102", UInt64(0x537e8cd), "E83E4BE9FF")] {
             let config = try config(build)
             // Silent is arm64 only: no equal-length x86_64 point has been established.
             XCTAssertFalse(Command.supports(.x86_64, [try target(config, Command.silentRevokeIdentifier)]), build)
@@ -51,5 +51,41 @@ final class ConfigIntelTests: XCTestCase {
         let config = try config("270100")
         XCTAssertFalse(Command.supports(.x86_64, config.targets))
         XCTAssertTrue(Command.supports(.arm64, config.targets))
+    }
+
+    /// Opt-in integration test against the original Tencent dylib. Only a temporary
+    /// standalone copy is written; no installed or mounted WeChat bundle is modified.
+    func test270135OfficialBinaryRoundTrip() throws {
+        guard let path = ProcessInfo.processInfo.environment["WECHATTWEAK_SAMPLE_270135"] else {
+            throw XCTSkip("Set WECHATTWEAK_SAMPLE_270135 to the pristine official wechat.dylib")
+        }
+        let original = URL(fileURLWithPath: path)
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let binary = directory.appendingPathComponent("sample.dylib")
+        try FileManager.default.copyItem(at: original, to: binary)
+        let config = try config("270135")
+        let allEntries = config.targets.flatMap(\.entries)
+        let before = try Patcher.inspect(binary: binary, entries: allEntries)
+        XCTAssertEqual(before.count, 20)
+        XCTAssertFalse(before.contains { $0.state == .unknown })
+        for identifier in [Command.silentRevokeIdentifier, Command.keeptipRevokeIdentifier, Command.updateIdentifier] {
+            let entries = try target(config, identifier).entries
+            try Patcher.patch(binary: binary, entries: entries)
+            XCTAssertTrue(try Patcher.inspect(binary: binary, entries: entries).allSatisfy { $0.state == .patched })
+            try Patcher.patch(binary: binary, entries: entries)
+        }
+        // Restore the exact original bytes, deduplicating the shared arm64 branch.
+        var seen = Set<String>()
+        let restore = try before.compactMap { item -> Config.Entry? in
+            let key = "\(item.entry.arch.rawValue):\(item.entry.addr)"
+            guard seen.insert(key).inserted else { return nil }
+            return try Config.Entry(arch: item.entry.arch, addr: item.entry.addr,
+                                    asmHex: item.current.hexString,
+                                    expectedHex: [item.entry.asm.hexString] + item.entry.expected.map(\.hexString))
+        }
+        try Patcher.patch(binary: binary, entries: restore)
+        XCTAssertTrue(FileManager.default.contentsEqual(atPath: original.path, andPath: binary.path))
     }
 }
