@@ -423,7 +423,7 @@
         ]
       }
     ],
-    "source": "tools/locate_revoke.py on the installed App Store edition 4.1.15.35 (wechat.dylib sha256 960222a9872c89a8ce14567427f2bb3e715435adbbd8723465ff7c253bb8fb30) | No update target: App Store edition has no built-in updater (no XAppUpdateManager). arm64 only."
+    "source": "tools/locate_revoke.py on the installed App Store edition 4.1.15.35 (wechat.dylib sha256 960222a9872c89a8ce14567427f2bb3e715435adbbd8723465ff7c253bb8fb30; arm64 slice sha256 6d3feb56043cb63d2ff3f77aa32115abbfe7a2f28b3ab1ab59886ee625703e4b) | No update target: App Store edition has no built-in updater (no XAppUpdateManager). arm64 only."
   },
   {
     "version": "270102",
